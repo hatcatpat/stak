@@ -1,0 +1,27 @@
+token: created by the lexer and used in the parser to determine what type a word should be
+
+value: an argument to a function, options are
+	- float
+	- void* (this will be casted depending on the VALUE_TYPE)
+
+stack: a stack containing the values used in operations
+
+atom: base type of all operations
+	- float (pushes a float to stack)
+	- string (pushes a string to the stack)
+	- [ugen.c] ugen (has its own state, performs an operation, usually pushes output to stack)
+	- [func.c] function (takes 0 or more values off stack, performs an operation, pushes 0 or more outputs to stack)
+	- [var.c] variable pointer (pushes all the values from that variables' stack onto the stack)
+	- (TODO) buffer (stores some float data in the buffer table, pushes its pointer onto the stack)
+
+procedure: a sequence of operations (i.e., atoms)
+	- note, this also stores dynamically allocated memory such as the ugens and strings
+
+variable: stores a procedure and a stack, along with its (TODO) update frequency (static vs dynamic)
+
+out: this is a special variable that always exists, and the top 2 values of its stack are sent to the speaker
+
+arrays used in the program:
+	variables -> linked list, each value has a key and a variable
+	funcs -> static array, each value has a key and a function
+	ugens -> static array, each value has a key and a ugen
