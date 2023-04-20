@@ -22,3 +22,8 @@ stereo audio is really simple in stack-based languages, you can use:
 * **dup** to duplicated the top value on the stack
 * **pan** to pan a mono signal into a stereo signal
 * **mix** to combine 2 stereo signals into 1 stereo signal
+
+## build requirements
+* ansi c compiler
+* make
+* jack
