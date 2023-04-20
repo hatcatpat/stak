@@ -23,6 +23,13 @@ stereo audio is really simple in stack-based languages, you can use:
 * **pan** to pan a mono signal into a stereo signal
 * **mix** to combine 2 stereo signals into 1 stereo signal
 
+## interacting
+this section needs work :)
+
+at the moment, the stak will just parse "test.st" when it loads
+
+you can interact with it further by sending a udp message to 127.0.0.1:2000, the stak_send.sh script gives an example of how to do this using netcat. the advantage of a udp server over stdin is that you can send messages from any other program (i.e., vim), without having to rely on a terminal multiplexer (like tmux or screen).
+
 ## build requirements
 * ansi c compiler
 * make
