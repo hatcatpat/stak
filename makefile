@@ -1,7 +1,7 @@
 all: stak
 
 stak: *.c *.h
-	gcc -g -o stak *.c -Wall -Wpedantic -ansi -lm -ljack
+	gcc -g -o stak *.c -ansi -Wall -Wpedantic -ljack -lm
 
 run: all
 	./stak

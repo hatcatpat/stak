@@ -2,42 +2,59 @@
 
 #include <jack/jack.h>
 
-#define CHANNELS 2
-
-struct audio audio;
 jack_port_t *port_in[2];
 jack_port_t *port_out[2];
 jack_client_t *client;
 
+audio_t audio;
+
+variable_t *variable_out = NULL;
+
 int
-process(jack_nframes_t nframes, void *x)
+audio_process(jack_nframes_t nframes, void *x)
 {
     static jack_default_audio_sample_t *out[CHANNELS];
     static int i = 0, c = 0;
+    (void)x;
 
     for(c = 0; c < CHANNELS; ++c)
         out[c] = jack_port_get_buffer(port_out[c], nframes);
 
-    for(i = 0; i < nframes; ++i)
+    if(variable_out == NULL)
         {
-            process_vars(&stak_root);
-            for(c = 0; c < CHANNELS; ++c)
-                *out[c]++ = popf(&stak_root.v.stack);
+            for(i = 0; i < nframes; ++i)
+                {
+                    variable_ll_process(&variables[0]);
+
+                    for(c = 0; c < CHANNELS; ++c)
+                        *out[c]++ = 0;
+                }
+        }
+    else
+        {
+            for(i = 0; i < nframes; ++i)
+                {
+                    variable_ll_process(&variables[0]);
+
+                    for(c = 0; c < CHANNELS; ++c)
+                        *out[c]++ = stack_pop_number(&variable_out->stack);
+                }
         }
 
     if(reload)
         {
-            replace_vars(&stak_root, &new_root);
-            printf("replaced vars:\n");
-            print_vars(&stak_root);
-            reload = false;
+            variable_ll_merge(&variables[0], &variables[1]);
+            printf("merged variables:\n");
+            variable_ll_print(&variables[0]);
+            variable_out = variable_ll_find(&variables[0], "out");
+            reload = 0;
         }
 
     return 0;
 }
 
-enum status
-init_audio()
+int
+audio_init()
 {
     int c = 0;
     const char **ports;
@@ -56,7 +73,7 @@ init_audio()
             if (status & JackServerFailed)
                 fprintf(stderr, "Unable to connect to JACK server\n");
 
-            return BAD;
+            return 1;
         }
 
     if (status & JackServerStarted)
@@ -68,7 +85,7 @@ init_audio()
             fprintf(stderr, "unique name: %s assigned\n", client_name);
         }
 
-    jack_set_process_callback(client, process, 0);
+    jack_set_process_callback(client, audio_process, 0);
 
     audio.rate = jack_get_sample_rate(client);
 
@@ -80,21 +97,21 @@ init_audio()
             if ((port_in[c] == NULL) || (port_out[c] == NULL))
                 {
                     fprintf(stderr, "no more JACK ports available\n");
-                    return BAD;
+                    return 1;
                 }
         }
 
     if (jack_activate(client))
         {
             fprintf(stderr, "cannot activate client");
-            return BAD;
+            return 1;
         }
 
     ports = jack_get_ports(client, NULL, NULL, JackPortIsPhysical | JackPortIsOutput);
     if (ports == NULL)
         {
             fprintf(stderr, "no physical capture ports\n");
-            return BAD;
+            return 1;
         }
     for(c = 0; c < CHANNELS; ++c)
         if (jack_connect(client, ports[c], jack_port_name(port_in[c])))
@@ -105,18 +122,18 @@ init_audio()
     if (ports == NULL)
         {
             fprintf(stderr, "no physical playback ports\n");
-            return BAD;
+            return 1;
         }
     for(c = 0; c < CHANNELS; ++c)
         if (jack_connect(client, jack_port_name(port_out[c]), ports[c]))
             fprintf(stderr, "cannot connect output ports\n");
     free(ports);
 
-    return OK;
+    return 1;
 }
 
 void
-deinit_audio()
+audio_deinit()
 {
     jack_client_close(client);
 }

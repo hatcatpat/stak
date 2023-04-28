@@ -1,85 +1,30 @@
 #include "stak.h"
 
-#include <signal.h>
+#include <time.h>
 
-bool reload = false;
-struct variable_ll new_root;
-
-const char *atom_type_name[] =
-{
-    "ERROR",
-    "FLOAT",
-    "STRING",
-    "FUNCTION",
-    "UGEN",
-    "VARIABLE"
-};
-
-const char *value_type_name[] =
-{
-    "ERROR",
-    "FLOAT",
-    "STRING",
-    "BUFFER"
-};
-
-void
-print_atom(struct atom *a)
-{
-    printf("%s ", atom_type_name[a->type]);
-
-    switch(a->type)
-        {
-            case ATOM_FLOAT:
-                printf("%f", a->x.f);
-                break;
-
-            case ATOM_STRING:
-                printf("%s", a->x.s);
-                break;
-
-            case ATOM_UGEN:
-                printf("%s", get_ugen_name(&a->x.u));
-                break;
-
-            case ATOM_VARIABLE:
-                printf("%s", a->x.v.key);
-                break;
-
-            case ATOM_FUNCTION:
-                printf("%s", get_func_name(a->x.fn));
-                break;
-
-            default:
-                break;
-        }
-
-    printf(" ");
-}
-
-void
-sigint(int x)
-{
-    server_running = false;
-}
+bool reload = 0;
 
 int
-main(void)
+main(int argc, char *argv[])
 {
-    print_ugens();
-    print_funcs();
+    srand(time(NULL));
 
-    init_notes();
-    init_audio();
+    variable_ll_init(&variables[0]);
+    audio_init();
 
-    parse_file("test.st");
+    parser_file("example.st");
 
-    signal(SIGINT, &sigint);
+    {
+        char ch;
+        while((ch = getchar()) != 'q')
+            {
+                if(ch == 'r')
+                    parser_file("example.st");
+                variable_ll_print(&variables[0]);
+            }
+    }
 
-    run_server();
-
-    deinit_audio();
-    deinit_vars(&stak_root);
+    audio_deinit();
+    variable_ll_deinit(&variables[0]);
     return 0;
 }
-

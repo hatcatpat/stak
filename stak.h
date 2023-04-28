@@ -1,17 +1,19 @@
-/* TODO:
- * - remove 'out' as a default variable in parser, set it explicitly like other variables.
- *   this prevents you accidentally editting the output when using the repl
- * */
-
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include <stdint.h>
-#include <stdbool.h>
-#include <time.h>
-#include <math.h>
+
+typedef signed char int8_t;
+typedef unsigned char uint8_t;
+typedef signed short int int16_t;
+typedef unsigned short int uint16_t;
+typedef signed int int32_t;
+typedef unsigned int uint32_t;
+typedef signed long int int64_t;
+typedef unsigned long int uint64_t;
 
 typedef unsigned int uint;
+
+typedef uint8_t bool;
 
 #define ABS(x) ((x) < 0 ? -(x) : (x))
 #define SQR(x) ((x) * (x))
@@ -20,174 +22,285 @@ typedef unsigned int uint;
 #define PI 3.14159265358979323846
 #define TAU (2 * PI)
 
-#define PROFILE(body) {\
-        clock_t start, end;\
-        double t;\
-        start = clock();\
-body\
-        end = clock();\
-        t = (end - start) / (double)CLOCKS_PER_SEC;\
-        printf("TIME TAKEN %f\n", t);\
-	}
+#define KEY_LENGTH 16
+#define STACK_SIZE 64
 
-/* enums */
-enum status
+#define CHANNELS 2
+
+enum value_type
 {
-    OK,
-    BAD
+    VALUE_ERROR,
+    VALUE_NUMBER,
+    VALUE_STRING,
+    VALUE_VARIABLE,
+    VALUE_BUFFER
 };
 
 enum atom_type
 {
     ATOM_ERROR,
-    ATOM_FLOAT,
+    ATOM_NUMBER,
     ATOM_STRING,
-    ATOM_FUNCTION,
-    ATOM_UGEN,
-    ATOM_VARIABLE
+    ATOM_VARIABLE,
+    ATOM_FUNCTION
 };
-extern const char *atom_type_name[];
 
-enum value_type
+enum process_type
 {
-    VALUE_ERROR,
-    VALUE_FLOAT,
-    VALUE_STRING,
-    VALUE_BUFFER
+    PROCESS_DONE,
+    PROCESS_ONCE,
+    PROCESS_ALWAYS
 };
-extern const char *value_type_name[];
 
-/* structs */
-struct value
+typedef struct _value value_t;
+typedef struct _stack stack_t;
+typedef struct _atom atom_t;
+typedef struct _procedure procedure_t;
+typedef struct _variable variable_t;
+typedef struct _variable_ll variable_ll_t;
+typedef struct _function function_t;
+typedef struct _audio audio_t;
+typedef struct _buffer buffer_t;
+
+struct _value
 {
     enum value_type type;
     union
     {
-        float f;
-        void *p;
+        void *pointer;
+        float number;
     } x;
 };
 
-#define MAX_STACK_SIZE 64
-struct stack
+struct _stack
 {
-    struct value data[MAX_STACK_SIZE];
-    uint pos;
+    value_t values[STACK_SIZE];
+    uint8_t pos;
 };
 
-struct procedure
+struct _function
 {
-    struct atom *atoms;
-    size_t num;
-};
-
-struct variable
-{
-    struct procedure proc;
-    struct stack stack;
-    bool dynamic;
-};
-
-#define MAX_VARIABLE_LENGTH 16
-struct variable_ll
-{
-    char key[MAX_VARIABLE_LENGTH];
-    struct variable_ll *next;
-    struct variable v;
-};
-
-struct ugen
-{
-    enum status (*init)(struct ugen *);
-    void (*deinit)(struct ugen *);
-    enum status (*update)(struct stack *s, struct ugen *u);
+    void (*init)(void **data);
+    void (*deinit)(void **data);
+    void (*process)(void **data, stack_t *stack);
+    enum process_type process_type;
     void *data;
 };
 
-typedef enum status (*function)(struct stack *s);
-
-struct atom
+struct _atom
 {
     enum atom_type type;
     union
     {
-        float f;
-        char *s;
-        function fn;
-        struct ugen u;
-        struct
-        {
-            char key[MAX_VARIABLE_LENGTH];
-            struct variable *v;
-        } v;
+        function_t function;
+        variable_t *variable;
+        char *string;
+        float number;
     } x;
 };
 
-struct audio
+struct _procedure
 {
-    float rate;
+    atom_t *atoms;
+    size_t len;
+    enum process_type process_type;
 };
 
-extern bool reload;
-extern struct variable_ll new_root;
+struct _variable
+{
+    procedure_t procedure;
+    stack_t stack;
+    char key[KEY_LENGTH];
+};
 
-void print_atom(struct atom *a);
+struct _variable_ll
+{
+    variable_t *variable;
+    variable_ll_t *next;
+};
+
+struct _audio
+{
+    float rate;
+    uint8_t chans;
+};
+
+struct _buffer
+{
+    float *data;
+    size_t len;
+    uint8_t chans;
+};
+
+/* stak.c */
+extern bool reload;
+
 
 /* stack.c */
-enum status duplicate(struct stack *s);
-struct value pop(struct stack *s);
-float popf(struct stack *s);
-struct value peek(struct stack *s, int offset);
-enum status push(struct stack *s, struct value v);
-enum status take(struct stack *src, struct stack *dest, int num);
-enum status concat(struct stack *src, struct stack *dest);
-bool check(struct stack *s, enum value_type type, int offset);
-void print_stack(struct stack *s);
+void
+value_print(value_t *value);
 
-/* parse.c */
-struct token;
-void parse_file(char *file);
-void lexer(char *str, size_t len);
-void parser(struct token *tokens, size_t num_tokens);
+void
+stack_print(stack_t *stack);
 
-/* var.c */
-extern struct variable_ll stak_root;
-void deinit_var_ll(struct variable_ll *root);
-void deinit_vars(struct variable_ll *root);
-void deinit_proc(struct procedure *p);
-void deinit_var(struct variable *v);
-void print_vars(struct variable_ll *root);
-char *get_var_name(struct variable_ll *root, struct variable *v);
-struct variable *find_var(struct variable_ll *root, char *key);
-struct variable *add_var(struct variable_ll *root, char *key);
-bool remove_var(struct variable_ll *root, char *key);
-void append_atom(struct variable *v, struct atom *a);
-void process_var(struct variable *v);
-void process_vars(struct variable_ll *root);
-void replace_vars(struct variable_ll *root, struct variable_ll *new_root);
-void reset_var_pointers(struct variable_ll *root);
+void
+stack_push(stack_t *stack, value_t value);
 
-/* ugen.c */
-void print_ugens();
-char *get_ugen_name(struct ugen *u);
-struct ugen *find_ugen(char *key);
+value_t
+stack_pop(stack_t *stack);
 
-/* func.c */
-void print_funcs();
-char *get_func_name(function fn);
-function find_func(char *key);
+float
+stack_pop_number(stack_t *stack);
+
+void *
+stack_pop_pointer(stack_t *stack);
+
+value_t *
+stack_peek(stack_t *stack);
+
+float
+stack_peek_number(stack_t *stack);
+
+void *
+stack_peek_pointer(stack_t *stack);
+
+void
+stack_concat(stack_t *dest, stack_t *source);
+
+void
+stack_reset(stack_t *stack);
+
+void
+stack_dup(stack_t *stack);
+
+void
+stack_swap(stack_t *stack);
+
+void
+stack_rot(stack_t *stack);
+
+void
+stack_drop(stack_t *stack);
+/* */
+
+
+
+/* variable.c */
+extern variable_ll_t variables[2];
+
+void
+variable_print(variable_t *variable);
+
+void
+variable_deinit(variable_t *variable);
+
+void
+variable_process(variable_t *variable);
+
+void
+variable_reset_process_type(variable_t *variable);
+
+
+
+void
+variable_ll_print(variable_ll_t *root);
+
+void
+variable_ll_init(variable_ll_t *root);
+
+void
+variable_ll_free(variable_ll_t *root);
+
+void
+variable_ll_deinit(variable_ll_t *root);
+
+variable_ll_t *
+variable_ll_add(variable_ll_t *root, char *key);
+
+void
+variable_ll_remove(variable_ll_t *root, char *key);
+
+variable_t *
+variable_ll_find(variable_ll_t *root, char *key);
+
+variable_ll_t *
+variable_ll_find_ll(variable_ll_t *root, char *key);
+
+void
+variable_ll_merge(variable_ll_t *old, variable_ll_t *new);
+
+void
+variable_ll_process(variable_ll_t *root);
+/* */
+
+
+
+/* procedure.c */
+void
+procedure_print(procedure_t *procedure);
+
+void
+procedure_deinit(procedure_t *procedure);
+
+void
+procedure_push(procedure_t *procedure, atom_t atom);
+
+void
+procedure_process(procedure_t *procedure, stack_t *stack);
+
+void
+procedure_reset_process_type(procedure_t *procedure);
+/* */
+
+
+
+/* atom.c */
+void
+atom_print(atom_t *atom);
+
+void
+atom_init(atom_t *atom);
+
+void
+atom_deinit(atom_t *atom);
+
+void
+atom_process(atom_t *atom, stack_t *stack);
+/* */
+
+
+
+/* parser.c */
+typedef struct _token token_t;
+
+void
+parser_file(char *filename);
+
+void
+parser_lex(char *text, size_t len);
+
+void
+parser_parse(token_t *tokens, size_t num_tokens);
+/* */
+
+
 
 /* audio.c */
-extern struct audio audio;
-enum status init_audio();
-void deinit_audio();
+extern audio_t audio;
 
-/* udp.c */
-extern bool server_running;
-enum status server_callback(char *str, size_t len);
-enum status run_server();
+int
+audio_init();
 
-/* util.c */
-void init_notes();
-float midi2freq(int m);
-int freq2midi(float freq);
+void
+audio_deinit();
+/* */
+
+
+
+/* function.c */
+function_t *
+function_find(char *key);
+
+char *
+function_find_key(function_t *function);
+/* */

@@ -1,113 +1,174 @@
 #include "stak.h"
 
-enum status
-duplicate(struct stack *s)
+void
+value_print(value_t *value)
 {
-    if(s->pos == 0)
-        return BAD;
-
-    s->pos++;
-    s->data[s->pos - 1] = s->data[s->pos - 2];
-
-    return OK;
-}
-
-struct value
-pop(struct stack *s)
-{
-    if(s->pos == 0)
+    switch(value->type)
         {
-            struct value err = { VALUE_ERROR };
-            return err;
+            case VALUE_ERROR:
+                printf("(ERROR) ");
+                break;
+
+            case VALUE_NUMBER:
+                printf("(NUMBER %f) ", value->x.number);
+                break;
+
+            case VALUE_STRING:
+                if(value->x.pointer == NULL)
+                    printf("(STRING NULL) ");
+                else
+                    printf("(STRING %s) ", (char *)value->x.pointer);
+                break;
+
+            case VALUE_VARIABLE:
+                if(value->x.pointer == NULL)
+                    printf("(VARIABLE NULL) ");
+                else
+                    printf("(VARIABLE %s) ", ((variable_t *)value->x.pointer)->key);
+                break;
+
+            case VALUE_BUFFER:
+                if(value->x.pointer == NULL)
+                    printf("(BUFFER NULL) ");
+                else
+                    {
+                        buffer_t *buffer = value->x.pointer;
+                        printf("(BUFFER len: %lu, chans: %i, data: %c) ", buffer->len, buffer->chans, buffer->data == NULL ? 'n' : 'y');
+                    }
+                break;
         }
-
-    return s->data[--s->pos];
-}
-
-float
-popf(struct stack *s)
-{
-    if(check(s, VALUE_FLOAT, 0))
-        return pop(s).x.f;
-    else
-        return 0;
-}
-
-enum status
-push(struct stack *s, struct value v)
-{
-    if(s->pos == MAX_STACK_SIZE - 1)
-        return BAD;
-
-    s->data[s->pos++] = v;
-
-    return OK;
-}
-
-enum status
-take(struct stack *src, struct stack *dest, int num)
-{
-    int i;
-
-    if(src->pos < MAX_STACK_SIZE - 1 - num)
-        return BAD;
-    if(dest->pos >= MAX_STACK_SIZE - 1 - num)
-        return BAD;
-
-    for(i = 0; i < num; ++i)
-        dest->data[dest->pos++] = src->data[src->pos - num + i + 1];
-
-    return OK;
-}
-
-enum status
-concat(struct stack *src, struct stack *dest)
-{
-    int i;
-
-    if(dest->pos + src->pos >= MAX_STACK_SIZE)
-        return BAD;
-
-    for(i = 0; i < src->pos; ++i)
-        dest->data[dest->pos++] = src->data[i];
-
-    return OK;
-}
-
-bool
-check(struct stack *s, enum value_type type, int offset)
-{
-    if(s->pos <= offset)
-        return false;
-
-    return s->data[s->pos - 1 - offset].type == type;
 }
 
 void
-print_stack(struct stack *s)
+stack_print(stack_t *stack)
+{
+    printf("\t[stack] pos: %i\n", stack->pos);
+
+    if(stack->pos > 0)
+        {
+            int i;
+
+            printf("\t\t");
+
+            for(i = 0; i < stack->pos; ++i)
+                value_print(&stack->values[i]);
+
+            printf("\n");
+        }
+}
+
+void
+stack_push(stack_t *stack, value_t value)
+{
+    if(stack->pos >= STACK_SIZE)
+        return;
+
+    stack->values[stack->pos++] = value;
+}
+
+value_t
+stack_pop(stack_t *stack)
+{
+    if(stack->pos == 0)
+        {
+            value_t v = { VALUE_ERROR };
+            return v;
+        }
+
+    return stack->values[--stack->pos];
+}
+
+float
+stack_pop_number(stack_t *stack)
+{
+    value_t value = stack_pop(stack);
+    return (value.type == VALUE_NUMBER) ? value.x.number : 0;
+}
+
+void *
+stack_pop_pointer(stack_t *stack)
+{
+    value_t value = stack_pop(stack);
+    return (value.type != VALUE_NUMBER && value.type != VALUE_ERROR) ? value.x.pointer : NULL;
+}
+
+value_t *
+stack_peek(stack_t *stack)
+{
+    if(stack->pos == 0)
+        return NULL;
+
+    return &stack->values[stack->pos - 1];
+}
+
+float
+stack_peek_number(stack_t *stack)
+{
+    value_t *value = stack_peek(stack);
+    return (value->type == VALUE_NUMBER) ? value->x.number : 0;
+}
+
+void *
+stack_peek_pointer(stack_t *stack)
+{
+    value_t *value = stack_peek(stack);
+    return (value->type != VALUE_NUMBER && value->type != VALUE_ERROR) ? value->x.pointer : NULL;
+}
+
+void
+stack_concat(stack_t *dest, stack_t *source)
 {
     int i;
-    for(i = 0; i < s->pos; ++i)
-        {
-            struct value *v = &s->data[i];
 
-            printf("%s ", value_type_name[v->type]);
+    if(dest->pos + source->pos >= STACK_SIZE)
+        return;
 
-            switch(v->type)
-                {
-                    case VALUE_FLOAT:
-                        printf("%f", v->x.f);
-                        break;
+    for(i = 0; i < source->pos; ++i)
+        dest->values[dest->pos++] = source->values[i];
+}
 
-                    case VALUE_STRING:
-                        printf("%s", (char*)v->x.p);
-                        break;
+void
+stack_reset(stack_t *stack)
+{
+    stack->pos = 0;
+}
 
-                    default:
-                        break;
-                }
+void
+stack_dup(stack_t *stack)
+{
+    stack_push(stack, *stack_peek(stack));
+}
 
-            printf(" ");
-        }
-    printf("\n");
+void
+stack_swap(stack_t *stack)
+{
+    value_t value;
+
+    if(stack->pos < 2)
+        return;
+
+    value = stack->values[stack->pos - 1];
+    stack->values[stack->pos - 1] = stack->values[stack->pos - 2];
+    stack->values[stack->pos - 2] = value;
+}
+
+void
+stack_rot(stack_t *stack)
+{
+    value_t value;
+
+    if(stack->pos < 3)
+        return;
+
+    value = stack->values[stack->pos - 1];
+    stack->values[stack->pos - 1] = stack->values[stack->pos - 2];
+    stack->values[stack->pos - 2] = stack->values[stack->pos - 3];
+    stack->values[stack->pos - 3] = value;
+
+}
+
+void
+stack_drop(stack_t *stack)
+{
+    (void)stack_pop(stack);
 }
