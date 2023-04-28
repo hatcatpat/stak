@@ -13,17 +13,24 @@ variable_t *variable_out = NULL;
 int
 audio_process(jack_nframes_t nframes, void *x)
 {
-    static jack_default_audio_sample_t *out[CHANNELS];
-    static int i = 0, c = 0;
+    static jack_default_audio_sample_t *out[CHANNELS], *in[CHANNELS];
+    static int i = 0;
+    static uint8_t c = 0;
     (void)x;
 
     for(c = 0; c < CHANNELS; ++c)
-        out[c] = jack_port_get_buffer(port_out[c], nframes);
+        {
+            out[c] = jack_port_get_buffer(port_out[c], nframes);
+            in[c] = jack_port_get_buffer(port_in[c], nframes);
+        }
 
     if(variable_out == NULL)
         {
             for(i = 0; i < nframes; ++i)
                 {
+                    for(c = 0; c < CHANNELS; ++c)
+                        audio.in[c] = 0;
+
                     variable_ll_process(&variables[0]);
 
                     for(c = 0; c < CHANNELS; ++c)
@@ -34,6 +41,9 @@ audio_process(jack_nframes_t nframes, void *x)
         {
             for(i = 0; i < nframes; ++i)
                 {
+                    for(c = 0; c < CHANNELS; ++c)
+                        audio.in[c] = *in[c]++;
+
                     variable_ll_process(&variables[0]);
 
                     for(c = 0; c < CHANNELS; ++c)
@@ -44,8 +54,6 @@ audio_process(jack_nframes_t nframes, void *x)
     if(reload)
         {
             variable_ll_merge(&variables[0], &variables[1]);
-            printf("merged variables:\n");
-            variable_ll_print(&variables[0]);
             variable_out = variable_ll_find(&variables[0], "out");
             reload = 0;
         }
@@ -129,7 +137,7 @@ audio_init()
             fprintf(stderr, "cannot connect output ports\n");
     free(ports);
 
-    return 1;
+    return 0;
 }
 
 void

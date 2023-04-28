@@ -95,7 +95,7 @@ ugen_pulse_process(void **data, stack_t *stack) /* freq -- output */
 }
 
 void
-ugen_play_process(void **data, stack_t *stack) /* speed buffer -- output */
+ugen_play_process(void **data, stack_t *stack) /* speed buffer -- c_0 c_1 ... c_n */
 {
     value_t value = { VALUE_NUMBER };
     oscil_t *oscil = *data;
@@ -112,14 +112,42 @@ ugen_play_process(void **data, stack_t *stack) /* speed buffer -- output */
 
     for(c = 0; c < buffer->chans; ++c)
         {
-            value.x.number = buffer->data[(int)(oscil->phase * buffer->len) * buffer->chans + c];
+            value.x.number = buffer->data[(int)oscil->phase * buffer->chans + c];
             stack_push(stack, value);
         }
 
-    oscil->phase += speed / audio.rate;
-    oscil->phase = fmod(oscil->phase, 1);
+    oscil->phase += speed;
+    oscil->phase = fmod(oscil->phase, buffer->len);
     if(oscil->phase < 0)
-        oscil->phase += 1;
+        oscil->phase += buffer->len;
+}
+
+void
+ugen_record_init(void **data)
+{
+    *data = calloc(1, sizeof(uint_t));
+}
+
+void
+ugen_record_process(void **data, stack_t *stack) /* c_0 c_1 ... c_n record buffer -- */
+{
+    uint_t *pos = *data;
+    buffer_t *buffer = stack_pop_pointer(stack);
+    bool record = stack_pop_number(stack) >= 0.5;
+    int c;
+
+    if(buffer == NULL || buffer->data == NULL)
+        {
+            value_t value = { VALUE_ERROR };
+            stack_push(stack, value);
+            return;
+        }
+
+    if(record)
+        for(c = 0; c < buffer->chans; ++c)
+            buffer->data[(*pos % buffer->len) * buffer->chans + (buffer->chans - 1 - c)] = stack_pop_number(stack);
+
+    (*pos)++;
 }
 /* */
 
@@ -209,7 +237,7 @@ function_buffer_fill_noise(void **data, stack_t *stack) /* buffer -- buffer */
 
 
 
-/* mixing */
+/* audio */
 void
 function_mix(void **data, stack_t *stack) /* left1 right1 left2 right2 -- (left1 + left2) (right1 + right2) */
 {
@@ -225,6 +253,23 @@ function_mix(void **data, stack_t *stack) /* left1 right1 left2 right2 -- (left1
 
     value.x.number = right[0] + right[1];
     stack_push(stack, value);
+
+    (void)data;
+}
+
+void
+function_in(void **data, stack_t *stack) /* -- in_0 in_1 ... in_n */
+{
+    value_t value = { VALUE_NUMBER };
+    uint8_t c;
+
+    for(c = 0; c < CHANNELS; ++c)
+        {
+            value.x.number = audio.in[CHANNELS - 1 - c];
+            stack_push(stack, value);
+        }
+
+    (void)data;
 }
 /* */
 
@@ -380,14 +425,16 @@ struct _functions
     {"tri", { ugen_oscil_init, NULL, ugen_tri_process, PROCESS_ALWAYS }},
     {"pulse", { ugen_oscil_init, NULL, ugen_pulse_process, PROCESS_ALWAYS }},
     {"play", { ugen_oscil_init, NULL, ugen_play_process, PROCESS_ALWAYS }},
+    {"record", { ugen_record_init, NULL, ugen_record_process, PROCESS_ALWAYS }},
 
     /* buffer */
     {"buffer", { function_buffer_init, function_buffer_deinit, function_buffer_process, PROCESS_ONCE }},
     {"fill_sin", { NULL, NULL, function_buffer_fill_sin, PROCESS_ONCE }},
     {"fill_noise", { NULL, NULL, function_buffer_fill_noise, PROCESS_ONCE }},
 
-    /* mixing */
+    /* audio */
     {"mix", { NULL, NULL, function_mix, PROCESS_ALWAYS }},
+    {"in", { NULL, NULL, function_in, PROCESS_ALWAYS }},
 
     /* math */
     {"add", { NULL, NULL, function_add, PROCESS_ALWAYS }},

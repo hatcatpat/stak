@@ -11,7 +11,7 @@ typedef unsigned int uint32_t;
 typedef signed long int int64_t;
 typedef unsigned long int uint64_t;
 
-typedef unsigned int uint;
+typedef unsigned int uint_t;
 
 typedef uint8_t bool;
 
@@ -93,7 +93,11 @@ struct _atom
     union
     {
         function_t function;
-        variable_t *variable;
+        struct
+        {
+            char key[KEY_LENGTH];
+            variable_t *variable;
+        } variable_key;
         char *string;
         float number;
     } x;
@@ -121,8 +125,8 @@ struct _variable_ll
 
 struct _audio
 {
+    float in[CHANNELS];
     float rate;
-    uint8_t chans;
 };
 
 struct _buffer
@@ -200,6 +204,8 @@ variable_process(variable_t *variable);
 void
 variable_reset_process_type(variable_t *variable);
 
+void
+variable_reset_pointers(variable_ll_t *root, variable_t *variable);
 
 
 void
@@ -231,6 +237,9 @@ variable_ll_merge(variable_ll_t *old, variable_ll_t *new);
 
 void
 variable_ll_process(variable_ll_t *root);
+
+void
+variable_ll_refresh(variable_ll_t *root);
 /* */
 
 
@@ -275,6 +284,9 @@ typedef struct _token token_t;
 
 void
 parser_file(char *filename);
+
+void
+parser_string(char *string);
 
 void
 parser_lex(char *text, size_t len);

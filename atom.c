@@ -22,7 +22,7 @@ atom_print(atom_t *atom)
                 break;
 
             case ATOM_VARIABLE:
-                printf("(VARIABLE %s) ", atom->x.variable->key);
+                printf("(VARIABLE %s %p) ", atom->x.variable_key.key, (void*)atom->x.variable_key.variable);
                 break;
         }
 }
@@ -74,13 +74,13 @@ atom_process(atom_t *atom, stack_t *stack)
                 break;
 
             case ATOM_VARIABLE:
-                if(atom->x.variable == NULL)
+                if(atom->x.variable_key.variable == NULL)
                     {
                         value.type = VALUE_ERROR;
                         stack_push(stack, value);
                     }
                 else
-                    stack_concat(stack, &atom->x.variable->stack);
+                    stack_concat(stack, &atom->x.variable_key.variable->stack);
                 break;
 
             case ATOM_NUMBER:

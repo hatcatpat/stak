@@ -50,6 +50,12 @@ parser_file(char *file)
 }
 
 void
+parser_string(char *string)
+{
+    parser_lex(string, strlen(string));
+}
+
+void
 parser_lex(char *string, size_t len)
 {
     char c;
@@ -234,24 +240,21 @@ parser_parse(token_t *tokens, size_t num_tokens)
 
                     case TOKEN_SYMBOL:
                     {
-                        union
-                        {
-                            function_t *function;
-                            variable_t *variable;
-                        } x;
+                        function_t *function;
 
-                        if((x.function = function_find(token->string)))
+                        if((function = function_find(token->string)))
                             {
                                 atom.type = ATOM_FUNCTION;
-                                atom.x.function = *x.function;
+                                atom.x.function = *function;
                                 atom_init(&atom);
                             }
-                        else if((x.variable = variable_ll_find(&root, token->string)) ||
-                                (x.variable = variable_ll_find(&variables[0], token->string)) ||
-                                (x.variable = variable_ll_find(&variables[1], token->string)))
+                        else if(variable_ll_find(&root, token->string) != NULL ||
+                                variable_ll_find(&variables[0], token->string) != NULL ||
+                                variable_ll_find(&variables[1], token->string) != NULL)
                             {
                                 atom.type = ATOM_VARIABLE;
-                                atom.x.variable = x.variable;
+                                atom.x.variable_key.variable = NULL;
+                                strncpy(atom.x.variable_key.key, token->string, KEY_LENGTH);
                             }
                         else
                             atom.type = ATOM_ERROR;

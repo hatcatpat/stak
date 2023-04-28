@@ -15,13 +15,24 @@ main(int argc, char *argv[])
     parser_file("example.st");
 
     {
-        char ch;
-        while((ch = getchar()) != 'q')
+#define MAX_INPUT_LENGTH 100
+        char buffer[MAX_INPUT_LENGTH];
+
+        printf("$ ");
+        while(fgets(buffer, MAX_INPUT_LENGTH, stdin))
             {
-                if(ch == 'r')
+                if(strcmp(buffer, "r\n") == 0)
                     parser_file("example.st");
-                variable_ll_print(&variables[0]);
+                else if(strcmp(buffer, "q\n") == 0)
+                    break;
+                else if(strcmp(buffer, "\n") == 0)
+                    variable_ll_print(&variables[0]);
+                else
+                    parser_string(buffer);
+
+                printf("$ ");
             }
+#undef MAX_INPUT_LENGTH
     }
 
     audio_deinit();

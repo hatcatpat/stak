@@ -6,7 +6,7 @@ variable_ll_t variables[2];
 void
 variable_print(variable_t *variable)
 {
-    printf("[variable] key: %s\n", variable->key);
+    printf("[variable] \"%s\" %p\n", variable->key, (void*)variable);
 
     procedure_print(&variable->procedure);
     stack_print(&variable->stack);
@@ -30,6 +30,23 @@ variable_reset_process_type(variable_t *variable)
 {
     procedure_reset_process_type(&variable->procedure);
 }
+
+void
+variable_reset_pointers(variable_ll_t *root, variable_t *variable)
+{
+    int i;
+
+    if(variable->procedure.atoms == NULL)
+        return;
+
+    for(i = 0; i < variable->procedure.len; ++i)
+        {
+            atom_t *atom = &variable->procedure.atoms[i];
+
+            if(atom->type == ATOM_VARIABLE)
+                atom->x.variable_key.variable = variable_ll_find(root, atom->x.variable_key.key);
+        }
+}
 /* */
 
 
@@ -40,7 +57,7 @@ variable_ll_print(variable_ll_t *root)
 {
     variable_ll_t *ll = root;
 
-    printf("[variable_ll]\n");
+    printf("[variable_ll] %p\n", (void*)root);
 
     while(ll != NULL)
         {
@@ -95,9 +112,7 @@ variable_ll_deinit(variable_ll_t *root)
                 }
 
             if(ll == root)
-                {
-                    ll->next = NULL;
-                }
+                ll->next = NULL;
             else
                 free(ll);
 
@@ -120,7 +135,7 @@ variable_ll_add(variable_ll_t *root, char *key)
         }
 
     ll->variable = calloc(1, sizeof(variable_t));
-    strcpy(ll->variable->key, key);
+    strncpy(ll->variable->key, key, KEY_LENGTH);
 
     return ll;
 }
@@ -132,7 +147,7 @@ variable_ll_remove(variable_ll_t *root, char *key)
 
     while(ll != NULL)
         {
-            if(strcmp(key, ll->variable->key) == 0)
+            if(strncmp(key, ll->variable->key, KEY_LENGTH) == 0)
                 {
                     if(ll->variable != NULL)
                         {
@@ -220,6 +235,7 @@ variable_ll_merge(variable_ll_t *old, variable_ll_t *new)
         }
 
     variable_ll_free(new);
+    variable_ll_refresh(old);
 }
 
 void
@@ -231,6 +247,24 @@ variable_ll_process(variable_ll_t *root)
         {
             if(ll->variable != NULL)
                 variable_process(ll->variable);
+
+            ll = ll->next;
+        }
+}
+
+void
+variable_ll_refresh(variable_ll_t *root)
+{
+    variable_ll_t *ll = root;
+
+    while(ll != NULL)
+        {
+            if(ll->variable != NULL)
+                {
+                    variable_reset_pointers(root, ll->variable);
+                    variable_reset_process_type(ll->variable);
+                }
+
             ll = ll->next;
         }
 }

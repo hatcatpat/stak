@@ -91,8 +91,8 @@ procedure_reset_process_type(procedure_t *procedure)
                         break;
 
                     case ATOM_VARIABLE:
-                        if(atom->x.variable != NULL)
-                            if(atom->x.variable->procedure.process_type == PROCESS_ALWAYS)
+                        if(atom->x.variable_key.variable != NULL)
+                            if(atom->x.variable_key.variable->procedure.process_type == PROCESS_ALWAYS)
                                 procedure->process_type = PROCESS_ALWAYS;
                         break;
 
