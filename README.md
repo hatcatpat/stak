@@ -5,30 +5,53 @@ heavily inspired by [sporth](https://paulbatchelor.github.io/proj/cook/what_is_s
 
 it is a tiny stack-based language similar to forth
 ```forth
-freq: 0.3 sine bi2norm 880 *
+# howdy there :)
+freq: 0.3 sin bi2norm 880 *
 
 wave: freq saw
 
-out: wave (0.1 sine) pan
+noise: 1000 1 buffer fill_noise
+
+out: (wave) (1 noise play 0.5 *) +
 ```
 
-* **variables** are defined by "name: body", and consist of a procedure (i.e., a list of atoms that will be evaluated) and a stack
-* **ugens** are an atom that have a persistent state, they are evaluated every sample and are used to generate/modify audio signals
-* **out** is a special variable, the top values on its stack are sent to the speaker
-* **comments** start with a # and take up the whole line
-* **brackets/parenthesis/tabs/newline** are completely ignored, use them to split up your code however you see fit
+## key terminology:
+* **value**: a basic unit used by operations: 
+  * a number
+  * a pointer to something
+  
+* **stack**: a stack of values
 
-stereo audio is really simple in stack-based languages, you can use:
-* **dup** to duplicated the top value on the stack
-* **pan** to pan a mono signal into a stereo signal
-* **mix** to combine 2 stereo signals into 1 stereo signal
+* **atom**: a basic operation:
+  * a string (push a string)
+  * a number (push a number)
+  * a pointer to a variable (append all values from that variable's stack onto the current);
+  * a function (see below)
+  
+* **procedure**: a list of atoms, and an process type (how often it should be processed)
+
+* **function**: these are compliated atoms that can perform a variety of tasks
+  * may have an "init" function, which is called when the atom is created
+  * may have a "deinit" function, which is called when the atom is destroyed
+  * may have a "process" function, which is called when the atom is processed
+  * may have some dynamic data, which can be allocated/freed by the init/deinit functions and used by the process function
+  * for example:
+    * add: no init, no deinit, no data, process(a,b) = a + b 
+    * buffer: init will allocate a buffer, deinit will free the buffer, data stores the buffer_t struct, process(len,chans) = resizes buffer to len and chan
+    * sin: init will allocate an oscilator, no deinit (data is automatically freed), data stores the oscil_t struct, process(freq) = increments oscilator by the given frequency
+
+* **variable**: these are defined by "name: body", and consist of a stack and a procedure that is applied to that stack
+
+* **out**: this is a special variable, the top values on its stack are sent to the speakera
+
+* **comments**: they start with a # and take up the whole line
+
+* **brackets/parenthesis/tabs/newline**: these are completely ignored, use them to split up your code however you see fit
 
 ## interacting
 this section needs work :)
 
-at the moment, the stak will just parse "test.st" when it loads
-
-you can interact with it further by sending a udp message to 127.0.0.1:2000, the stak_send.sh script gives an example of how to do this using netcat. the advantage of a udp server over stdin is that you can send messages from any other program (i.e., vim), without having to rely on a terminal multiplexer (like tmux or screen).
+currently, type "r" to reload example.st, "q" to quit
 
 ## build requirements
 * ansi c compiler
