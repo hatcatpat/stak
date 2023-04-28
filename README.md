@@ -25,7 +25,7 @@ out: (wave) (1 noise play 0.5 *) +
 * **atom**: a basic operation:
   * a string (push a string)
   * a number (push a number)
-  * a pointer to a variable (append all values from that variable's stack onto the current);
+  * a pointer to a variable (append all values from that variable's stack onto the current)
   * a function (see below)
   
 * **procedure**: a list of atoms, and an process type (how often it should be processed)
