@@ -1,11 +1,7 @@
-b: (44100 0.1 *) 2 buffer
+a: (1 2 3 4) 2 4 scale_
 
-tog: 1 pulse bi2norm
-
-r: in tog b record
-
-lfo: [(0.013 sin bi2norm 4 *) sin bi2norm (0.003 sin bi2norm 880 *) *]
-
-speed: (1 saw) bi2norm 4 *
-
-out: speed b play
+b:
+	(440 sin -1 pan)
+	(550 saw 1 pan)
+	(2 add_)
+	out

@@ -47,9 +47,10 @@ enum atom_type
 
 enum process_type
 {
-    PROCESS_DONE,
-    PROCESS_ONCE,
-    PROCESS_ALWAYS
+    PROCESS_DONE, /* do not process */
+    PROCESS_ONCE, /* process once */
+    PROCESS_WHENEVER, /* no restrictions */
+    PROCESS_ALWAYS /* process every sample */
 };
 
 typedef struct _value value_t;
@@ -125,7 +126,7 @@ struct _variable_ll
 
 struct _audio
 {
-    float in[CHANNELS];
+    float in[CHANNELS], out[CHANNELS];
     float rate;
 };
 

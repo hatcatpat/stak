@@ -109,6 +109,7 @@ parser_lex(char *string, size_t len)
                                 case '8':
                                 case '9':
                                 case '-':
+                                case '.':
                                     type = TOKEN_NUMBER;
                                     start = i;
                                     break;
@@ -147,15 +148,40 @@ parser_lex(char *string, size_t len)
                             }
                         break;
 
+                    case TOKEN_NUMBER:
+                        switch(c)
+                            {
+                                case '0':
+                                case '1':
+                                case '2':
+                                case '3':
+                                case '4':
+                                case '5':
+                                case '6':
+                                case '7':
+                                case '8':
+                                case '9':
+                                case '.':
+                                    break;
 
+                                case ':':
+                                case '#':
+                                case ' ':
+                                    break;
+
+                                default:
+                                    type = TOKEN_SYMBOL;
+                                    break;
+                            }
+                    /* FALLTHROUGH */
                     default:
                         switch(c)
                             {
                                 case ':':
                                     type = TOKEN_VARIABLE;
+                                /* FALLTHROUGH */
                                 case '#':
                                 case ' ':
-                                case '\n':
                                 {
                                     if(i != start)
                                         {
@@ -169,7 +195,10 @@ parser_lex(char *string, size_t len)
                                             strncpy(token->string, &string[start], len);
                                             token->string[len] = '\0';
 
-                                            token->type = type;
+                                            if(type == TOKEN_NUMBER && len == 1 && token->string[0] == '-')
+                                                token->type = TOKEN_SYMBOL;
+                                            else
+                                                token->type = type;
                                         }
 
                                     if(c == '#')
@@ -242,7 +271,7 @@ parser_parse(token_t *tokens, size_t num_tokens)
                     {
                         function_t *function;
 
-                        if((function = function_find(token->string)))
+                        if((function = function_find(token->string)) != NULL)
                             {
                                 atom.type = ATOM_FUNCTION;
                                 atom.x.function = *function;

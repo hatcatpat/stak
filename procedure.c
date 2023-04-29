@@ -3,7 +3,28 @@
 void
 procedure_print(procedure_t *procedure)
 {
-    printf("\t[procedure] len: %lu, process_type: %i\n", procedure->len, procedure->process_type);
+    printf("\t[procedure] len: %lu, process_type: ", procedure->len);
+
+    switch(procedure->process_type)
+        {
+            case PROCESS_DONE:
+                printf("DONE");
+                break;
+
+            case PROCESS_ONCE:
+                printf("ONCE");
+                break;
+
+            case PROCESS_WHENEVER:
+                printf("WHENEVER");
+                break;
+
+            case PROCESS_ALWAYS:
+                printf("ALWAYS");
+                break;
+        }
+
+    printf("\n");
 
     if(procedure->atoms != NULL)
         {
@@ -52,7 +73,7 @@ procedure_process(procedure_t *procedure, stack_t *stack)
     if(procedure->atoms == NULL || procedure->process_type == PROCESS_DONE)
         return;
 
-    if(procedure->process_type == PROCESS_ONCE)
+    if(procedure->process_type != PROCESS_ALWAYS)
         procedure->process_type = PROCESS_DONE;
 
     stack_reset(stack);
@@ -72,7 +93,7 @@ procedure_reset_process_type(procedure_t *procedure)
             return;
         }
 
-    procedure->process_type = PROCESS_ONCE;
+    procedure->process_type = PROCESS_WHENEVER;
 
     for(i = 0; i < procedure->len; ++i)
         {

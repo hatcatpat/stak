@@ -147,22 +147,25 @@ variable_ll_remove(variable_ll_t *root, char *key)
 
     while(ll != NULL)
         {
-            if(strncmp(key, ll->variable->key, KEY_LENGTH) == 0)
+            if(ll->variable != NULL)
                 {
-                    if(ll->variable != NULL)
+                    if(strncmp(key, ll->variable->key, KEY_LENGTH) == 0)
                         {
-                            variable_deinit(ll->variable);
-                            free(ll->variable);
-                            ll->variable = NULL;
+                            if(ll->variable != NULL)
+                                {
+                                    variable_deinit(ll->variable);
+                                    free(ll->variable);
+                                    ll->variable = NULL;
+                                }
+
+                            if(prev != NULL)
+                                prev->next = ll->next;
+
+                            if(ll != root)
+                                free(ll);
+
+                            return;
                         }
-
-                    if(prev != NULL)
-                        prev->next = ll->next;
-
-                    if(ll != root)
-                        free(ll);
-
-                    return;
                 }
 
             prev = ll;
@@ -207,9 +210,9 @@ variable_ll_merge(variable_ll_t *old, variable_ll_t *new)
                     if(ll->variable->procedure.atoms == NULL)
                         {
                             variable_ll_remove(old, ll->variable->key);
-
                             variable_deinit(ll->variable);
                             free(ll->variable);
+                            ll->variable = NULL;
                         }
                     else
                         {

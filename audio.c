@@ -8,8 +8,6 @@ jack_client_t *client;
 
 audio_t audio;
 
-variable_t *variable_out = NULL;
-
 int
 audio_process(jack_nframes_t nframes, void *x)
 {
@@ -24,37 +22,23 @@ audio_process(jack_nframes_t nframes, void *x)
             in[c] = jack_port_get_buffer(port_in[c], nframes);
         }
 
-    if(variable_out == NULL)
+    for(i = 0; i < nframes; ++i)
         {
-            for(i = 0; i < nframes; ++i)
+            for(c = 0; c < CHANNELS; ++c)
                 {
-                    for(c = 0; c < CHANNELS; ++c)
-                        audio.in[c] = 0;
-
-                    variable_ll_process(&variables[0]);
-
-                    for(c = 0; c < CHANNELS; ++c)
-                        *out[c]++ = 0;
+                    audio.in[c] = *in[c]++;
+                    audio.out[c] = 0;
                 }
-        }
-    else
-        {
-            for(i = 0; i < nframes; ++i)
-                {
-                    for(c = 0; c < CHANNELS; ++c)
-                        audio.in[c] = *in[c]++;
 
-                    variable_ll_process(&variables[0]);
+            variable_ll_process(&variables[0]);
 
-                    for(c = 0; c < CHANNELS; ++c)
-                        *out[c]++ = stack_pop_number(&variable_out->stack);
-                }
+            for(c = 0; c < CHANNELS; ++c)
+                *out[c]++ = audio.out[c];
         }
 
     if(reload)
         {
             variable_ll_merge(&variables[0], &variables[1]);
-            variable_out = variable_ll_find(&variables[0], "out");
             reload = 0;
         }
 
