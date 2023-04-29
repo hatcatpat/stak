@@ -30,7 +30,7 @@ x: (wave) (1 noise play 0.5 *) + out
   
 * **procedure**: a list of atoms, and an process type (how often it should be processed)
 
-* **function**: these are compliated atoms that can perform a variety of tasks
+* **function**: these are complicated atoms that can perform a variety of tasks
   * may have an "init" function, which is called when the atom is created
   * may have a "deinit" function, which is called when the atom is destroyed
   * may have a "process" function, which is called when the atom is processed
