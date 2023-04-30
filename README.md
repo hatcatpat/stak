@@ -12,7 +12,7 @@ wave: freq saw
 
 noise: 1000 1 buffer fill_noise
 
-out: (wave) (1 noise play 0.5 *) +
+x: (wave) (1 noise play 0.5 *) + out
 ```
 
 ## key terminology:
@@ -30,7 +30,7 @@ out: (wave) (1 noise play 0.5 *) +
   
 * **procedure**: a list of atoms, and an process type (how often it should be processed)
 
-* **function**: these are compliated atoms that can perform a variety of tasks
+* **function**: these are complicated atoms that can perform a variety of tasks
   * may have an "init" function, which is called when the atom is created
   * may have a "deinit" function, which is called when the atom is destroyed
   * may have a "process" function, which is called when the atom is processed
@@ -42,16 +42,18 @@ out: (wave) (1 noise play 0.5 *) +
 
 * **variable**: these are defined by "name: body", and consist of a stack and a procedure that is applied to that stack
 
-* **out**: this is a special variable, the top values on its stack are sent to the speakera
+* **out**: this is a function that pops values to the audio output
 
-* **comments**: they start with a # and take up the whole line
+* **in**: similarly, this pushes the audio input to the stack
+
+* **comments**: they start with a # and take up the whole line, or until another #
 
 * **brackets/parenthesis/tabs/newline**: these are completely ignored, use them to split up your code however you see fit
 
 ## interacting
 this section needs work :)
 
-currently, type "r" to reload example.st, "q" to quit
+currently, type "r" to reload example.st, "q" to quit, enter to print current state. otherwise, input is evaluated.
 
 ## build requirements
 * ansi c compiler
