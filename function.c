@@ -218,7 +218,10 @@ typedef struct _rand
 void
 ugen_rand_init(void **data)
 {
-    *data = calloc(1, sizeof(rand_t));
+    rand_t *randy = calloc(1, sizeof(rand_t));
+    randy->value = random_float(-1, 1);
+
+    *data = randy;
 }
 
 void
@@ -349,7 +352,6 @@ function_buffer_info(void **data, stack_t *stack) /* buffer -- len chans */
 {
     value_t value = { VALUE_NUMBER };
     buffer_t *buffer = stack_pop_pointer(stack);
-    (void)data;
 
     if(buffer == NULL)
         {
@@ -372,7 +374,6 @@ function_buffer_fill_sin(void **data, stack_t *stack) /* buffer -- buffer */
 {
     int i, c;
     buffer_t *buffer = stack_peek_pointer(stack);
-    (void)data;
 
     if(buffer == NULL || buffer->data == NULL)
         {
@@ -394,7 +395,6 @@ function_buffer_fill_noise(void **data, stack_t *stack) /* buffer -- buffer */
 {
     int i, c;
     buffer_t *buffer = stack_peek_pointer(stack);
-    (void)data;
 
     if(buffer == NULL || buffer->data == NULL)
         {
@@ -410,6 +410,24 @@ function_buffer_fill_noise(void **data, stack_t *stack) /* buffer -- buffer */
                 buffer->data[i * buffer->chans + c] = x;
         }
 }
+
+void
+function_file_process(void **data, stack_t *stack) /* file -- buffer */
+{
+    value_t value = { VALUE_BUFFER };
+    buffer_t *buffer = *data;
+    char *file = stack_pop_pointer(stack);
+
+    if(buffer->data != NULL)
+        free(buffer->data);
+
+    if(file == NULL)
+        return;
+
+    *buffer = wav_decode(file);
+    value.x.pointer = buffer;
+    stack_push(stack, value);
+}
 /* */
 
 
@@ -420,7 +438,6 @@ function_mix(void **data, stack_t *stack) /* left1 right1 left2 right2 -- (left1
 {
     float left[2], right[2];
     value_t value = { VALUE_NUMBER };
-    (void)data;
 
     right[1] = stack_pop_number(stack);
     left[1] = stack_pop_number(stack);
@@ -440,7 +457,6 @@ function_in(void **data, stack_t *stack) /* -- in_0 in_1 ... in_n */
 {
     value_t value = { VALUE_NUMBER };
     uint8_t c;
-    (void)data;
 
     for(c = 0; c < CHANNELS; ++c)
         {
@@ -453,7 +469,6 @@ void
 function_out(void **data, stack_t *stack) /* out_0 out_1 ... out_n -- */
 {
     uint8_t c;
-    (void)data;
 
     for(c = 0; c < CHANNELS; ++c)
         audio.out[CHANNELS - 1 - c] += stack_pop_number(stack);
@@ -465,7 +480,6 @@ function_pan(void **data, stack_t *stack) /* mono pan[-1,1] -- stereo */
     value_t value = { VALUE_NUMBER };
     float angle = bi2norm(stack_pop_number(stack));
     float input = stack_pop_number(stack);
-    (void)data;
 
     if(angle < 0)
         angle = 0;
@@ -491,7 +505,6 @@ function_add(void **data, stack_t *stack) /* b a -- (a + b) */
     value_t value = { VALUE_NUMBER };
     float a = stack_pop_number(stack);
     float b = stack_pop_number(stack);
-    (void)data;
 
     value.x.number = a + b;
     stack_push(stack, value);
@@ -503,7 +516,6 @@ function_sub(void **data, stack_t *stack) /* b a -- (b - a) */
     value_t value = { VALUE_NUMBER };
     float a = stack_pop_number(stack);
     float b = stack_pop_number(stack);
-    (void)data;
 
     value.x.number = b - a;
     stack_push(stack, value);
@@ -515,7 +527,6 @@ function_mul(void **data, stack_t *stack) /* b a -- (a * b) */
     value_t value = { VALUE_NUMBER };
     float a = stack_pop_number(stack);
     float b = stack_pop_number(stack);
-    (void)data;
 
     value.x.number = a * b;
     stack_push(stack, value);
@@ -527,7 +538,6 @@ function_div(void **data, stack_t *stack) /* b a -- (b / a) */
     value_t value = { VALUE_NUMBER };
     float a = stack_pop_number(stack);
     float b = stack_pop_number(stack);
-    (void)data;
 
     value.x.number = b / a;
     stack_push(stack, value);
@@ -537,7 +547,6 @@ void
 function_recip(void **data, stack_t *stack) /* a -- (1 / a) */
 {
     value_t value = { VALUE_NUMBER };
-    (void)data;
 
     value.x.number = stack_pop_number(stack);
     if(value.x.number != 0)
@@ -549,7 +558,6 @@ void
 function_neg(void **data, stack_t *stack) /* a -- -a */
 {
     value_t value = { VALUE_NUMBER };
-    (void)data;
 
     value.x.number = -stack_pop_number(stack);
     stack_push(stack, value);
@@ -559,7 +567,6 @@ void
 function_bi2norm(void **data, stack_t *stack) /* bi -- norm */
 {
     value_t value = { VALUE_NUMBER };
-    (void)data;
 
     value.x.number = bi2norm(stack_pop_number(stack));
     stack_push(stack, value);
@@ -569,7 +576,6 @@ void
 function_norm2bi(void **data, stack_t *stack) /* norm -- bi */
 {
     value_t value = { VALUE_NUMBER };
-    (void)data;
 
     value.x.number = norm2bi(stack_pop_number(stack));
     stack_push(stack, value);
@@ -579,7 +585,6 @@ void
 function_sec2samp(void **data, stack_t *stack) /* seconds -- samples */
 {
     value_t value = { VALUE_NUMBER };
-    (void)data;
 
     value.x.number = stack_pop_number(stack) * audio.rate;
     stack_push(stack, value);
@@ -589,7 +594,6 @@ void
 function_samp2sec(void **data, stack_t *stack) /* samples -- seconds */
 {
     value_t value = { VALUE_NUMBER };
-    (void)data;
 
     value.x.number = stack_pop_number(stack) / audio.rate;
     stack_push(stack, value);
@@ -608,7 +612,6 @@ multichannel_unary(void **data, stack_t *stack, float (*unary)(float x))
     float temp[MAX_CHANNELS];
     uint_t i;
     uint_t n = stack_pop_number(stack);
-    (void)data;
 
     n = MIN(n, MAX_CHANNELS);
 
@@ -629,7 +632,6 @@ multichannel_binop(void **data, stack_t *stack, float (*binop)(float a, float b)
     float temp[MAX_CHANNELS];
     uint_t i;
     uint_t n = stack_pop_number(stack);
-    (void)data;
 
     n = MIN(n, MAX_CHANNELS);
 
@@ -687,7 +689,6 @@ function_scale_(void **data, stack_t *stack) /* (x0 x1 x2 ... xn) s n -- x0*s x1
     uint_t i;
     uint_t n = stack_pop_number(stack);
     float scale = stack_pop_number(stack);
-    (void)data;
 
     n = MIN(n, MAX_CHANNELS);
 
@@ -755,7 +756,6 @@ void
 function_constant_general(void **data, stack_t *stack, float constant)
 {
     value_t value = { VALUE_NUMBER };
-    (void)data;
 
     value.x.number = constant;
     stack_push(stack, value);
@@ -786,28 +786,24 @@ function_rate(void **data, stack_t *stack) /* -- audio.rate */
 void
 function_dup(void **data, stack_t *stack)
 {
-    (void)data;
     stack_dup(stack);
 }
 
 void
 function_swap(void **data, stack_t *stack)
 {
-    (void)data;
     stack_swap(stack);
 }
 
 void
 function_rot(void **data, stack_t *stack)
 {
-    (void)data;
     stack_rot(stack);
 }
 
 void
 function_drop(void **data, stack_t *stack)
 {
-    (void)data;
     stack_drop(stack);
 }
 /* */
@@ -839,6 +835,7 @@ struct _functions
     {"buffer_info", { NULL, NULL, function_buffer_info, PROCESS_WHENEVER }},
     {"fill_sin", { NULL, NULL, function_buffer_fill_sin, PROCESS_ONCE }},
     {"fill_noise", { NULL, NULL, function_buffer_fill_noise, PROCESS_ONCE }},
+    {"file", { function_buffer_init, function_buffer_deinit, function_file_process, PROCESS_ONCE }},
 
     /* audio */
     {"mix", { NULL, NULL, function_mix, PROCESS_ALWAYS }},

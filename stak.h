@@ -15,6 +15,21 @@ typedef unsigned int uint_t;
 
 typedef uint8_t bool;
 
+#define INT8_MIN (-128)
+#define INT16_MIN (-32768)
+#define INT32_MIN (-2147483647 - 1)
+#define INT64_MIN  (-9223372036854775807LL - 1)
+
+#define INT8_MAX 127
+#define INT16_MAX 32767
+#define INT32_MAX 2147483647
+#define INT64_MAX 9223372036854775807LL
+
+#define UINT8_MAX 0xff
+#define UINT16_MAX 0xffff
+#define UINT32_MAX 0xffffffff
+#define UINT64_MAX 0xffffffffffffffffULL
+
 #define ABS(x) ((x) < 0 ? -(x) : (x))
 #define SQR(x) ((x) * (x))
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
@@ -139,6 +154,7 @@ struct _buffer
 
 /* stak.c */
 extern bool reload;
+extern bool running;
 
 
 /* stack.c */
@@ -294,6 +310,9 @@ parser_lex(char *text, size_t len);
 
 void
 parser_parse(token_t *tokens, size_t num_tokens);
+
+void
+parser_command(char *string);
 /* */
 
 
@@ -316,4 +335,18 @@ function_find(char *key);
 
 char *
 function_find_key(function_t *function);
+/* */
+
+
+
+/* udp.c */
+/* #define UDP */
+int
+udp_run();
+/* */
+
+
+
+/* wav.c */
+buffer_t wav_decode(char *file);
 /* */

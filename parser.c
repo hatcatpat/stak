@@ -319,3 +319,16 @@ parser_parse(token_t *tokens, size_t num_tokens)
     variables[1] = root;
     reload = 1;
 }
+
+void
+parser_command(char *string)
+{
+    if(strcmp(string, "q\n") == 0)
+        running = 0;
+    else if(strcmp(string, "r\n") == 0)
+        parser_file("example.st");
+    else if(strcmp(string, "\n") == 0)
+        variable_ll_print(&variables[0]);
+    else
+        parser_string(string);
+}

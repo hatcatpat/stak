@@ -1,7 +1,3 @@
-a: (1 2 3 4) 2 4 scale_
+b: "/home/pat/media/sound.wav" file
 
-b:
-	(440 sin -1 pan)
-	(550 saw 1 pan)
-	(2 add_)
-	out
+x: ((0.5 rand 2 *) b play) (0.5 0.8 delay) (0.1 sin) pan out

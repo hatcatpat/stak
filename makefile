@@ -1,7 +1,14 @@
 all: stak
 
+cc=gcc
+warnings=-Wall -Wpedantic
+libraries=-ljack -lm
+
 stak: *.c *.h
-	gcc -g -o stak *.c -ansi -Wall -Wpedantic -ljack -lm
+	$(cc) -g -o stak *.c -ansi $(warnings) $(libraries)
+
+release: *.c *.h
+	$(cc) -o stak *.c -ansi -O3 $(warnings) $(libraries)
 
 run: all
 	./stak
